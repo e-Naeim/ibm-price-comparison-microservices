@@ -1,0 +1,59 @@
+test_endpoint_validation (test_python_services.EndpointConfigurationTests.test_endpoint_validation) ... ok
+test_health (test_python_services.FrontendTests.test_health) ... ok
+test_index_served_from_any_working_directory (test_python_services.FrontendTests.test_index_served_from_any_working_directory) ... ok
+test_catalogue_matches_every_dealer_price (test_python_services.ProductTests.test_catalogue_matches_every_dealer_price) ... ok
+test_cors (test_python_services.ProductTests.test_cors) ... ok
+test_health (test_python_services.ProductTests.test_health) ... ok
+test_laptop_dealers_have_consistent_case (test_python_services.ProductTests.test_laptop_dealers_have_consistent_case) ... ok
+test_products_from_any_working_directory (test_python_services.ProductTests.test_products_from_any_working_directory) ... ok
+test_unknown_product (test_python_services.ProductTests.test_unknown_product) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.031s
+
+OK
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> price-comparison-verification@1.0.0 test
+> node --test tests/frontend.test.js
+
+✔ products populate and dependent dropdown starts disabled (88.171735ms)
+✔ select product lists dealers and All Dealers (31.649582ms)
+✔ selected dealer URL is encoded and displays price (12.455637ms)
+✔ all-dealers prices render a labelled table safely (14.710963ms)
+✔ product reset clears dealers and prices without a request (13.641248ms)
+✔ dealer placeholder clears price without fetching (13.905467ms)
+✔ newer product selection wins over slow earlier response (10.240259ms)
+✔ product changes invalidate a pending price response (10.067709ms)
+✔ new dealer selection wins over slow old price (12.989423ms)
+✔ product API failure exposes retry that recovers (12.369546ms)
+✔ network errors and invalid price response fail visibly (16.017107ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 599.483569
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> dealer-pricing-microservice@1.0.0 test
+> node --test test/*.test.js
+
+✔ health endpoint (20.680982ms)
+✔ selected product and encoded dealer name (4.695664ms)
+✔ all dealer prices (4.289209ms)
+✔ unknown dealer and unavailable product return 404 (5.922908ms)
+✔ inherited object properties are not products (4.611726ms)
+✔ CORS supports independent frontend origin (2.92561ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 198.066115
+PASS live APIs: 3 healthy services, 4 products, 12 matching dealer prices
+PASS live frontend integration: real product API, dealer API, selected price, all 3 prices, reset

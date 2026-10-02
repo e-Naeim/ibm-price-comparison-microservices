@@ -1,0 +1,11 @@
+{
+  "name": "dealer-pricing-microservice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dealer pricing API for the IBM price comparison project",
+  "main": "server.js",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node server.js", "test": "node --test test/*.test.js" },
+  "dependencies": { "cors": "^2.8.5", "express": "^4.21.2" },
+  "license": "Apache-2.0"
+}

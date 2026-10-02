@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Products price comparison</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #152238; background: #f3f6fa; }
+    body { margin: 0; padding: 32px 16px; }
+    main { max-width: 760px; margin: auto; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 24px #18223514; }
+    h1 { margin: 0 0 12px; font-size: clamp(1.6rem, 5vw, 2.2rem); }
+    p { line-height: 1.5; }
+    label { display: block; font-weight: 650; margin-bottom: 8px; }
+    .field { margin: 24px 0; }
+    select, button { font: inherit; padding: 12px; border: 1px solid #708198; border-radius: 6px; }
+    select { width: 100%; background: white; color: inherit; }
+    select:disabled { color: #65758b; background: #f3f6fa; }
+    button { background: #0f62fe; color: white; cursor: pointer; }
+    :focus-visible { outline: 3px solid #0f62fe; outline-offset: 3px; }
+    #status { min-height: 1.5em; }
+    #status.error { color: #a11212; }
+    #pricing { font-size: 1.125rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+    caption { text-align: left; font-weight: 650; margin-bottom: 12px; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #dbe3ef; }
+    th { background: #e6efff; }
+    tbody tr:nth-child(even) { background: #f3f6fa; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Products price comparison</h1>
+    <p>Choose a product and a dealer, or compare prices from all dealers.</p>
+    <div class="field" id="prod_dd">
+      <label for="selProd">Product</label>
+      <select id="selProd" disabled><option value="">--SELECT--</option></select>
+    </div>
+    <div class="field" id="dealers">
+      <label for="selDealer">Dealer</label>
+      <select id="selDealer" disabled><option value="">--SELECT--</option></select>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+    <button id="retry" type="button" hidden>Retry loading products</button>
+    <div id="pricing" aria-live="polite"></div>
+  </main>
+  <script>
+    "use strict";
+    // Replace both URLs with the actual Code Engine deployment URLs, including /.
+    let produrl = "http://localhost:5000/";
+    let dealerurl = "http://localhost:8080/";
+
+    const productSelect = document.getElementById("selProd");
+    const dealerSelect = document.getElementById("selDealer");
+    const pricing = document.getElementById("pricing");
+    const status = document.getElementById("status");
+    const retry = document.getElementById("retry");
+    let productRequest = 0;
+    let dealerRequest = 0;
+    let priceRequest = 0;
+
+    function showStatus(message, isError = false) {
+      status.textContent = message;
+      status.className = isError ? "error" : "";
+    }
+    function resetSelect(select) {
+      select.replaceChildren(new Option("--SELECT--", ""));
+      select.disabled = true;
+    }
+    async function requestJSON(url) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    async function loadProducts() {
+      const request = ++productRequest;
+      ++dealerRequest;
+      ++priceRequest;
+      resetSelect(productSelect);
+      resetSelect(dealerSelect);
+      pricing.replaceChildren();
+      retry.hidden = true;
+      showStatus("Loading products…");
+      try {
+        const data = await requestJSON(produrl + "products");
+        if (request !== productRequest) return;
+        if (!Array.isArray(data.products) || !data.products.length) throw new Error("No products");
+        data.products.forEach(product => productSelect.add(new Option(product, product)));
+        productSelect.disabled = false;
+        showStatus("Select a product to see its dealers.");
+      } catch (error) {
+        if (request !== productRequest) return;
+        showStatus("Could not load products. Check the service connection and try again.", true);
+        retry.hidden = false;
+      }
+    }
+    async function getDealers() {
+      const product = productSelect.value;
+      const request = ++dealerRequest;
+      ++priceRequest;
+      resetSelect(dealerSelect);
+      pricing.replaceChildren();
+      if (!product) { showStatus("Select a product to see its dealers."); return; }
+      showStatus("Loading dealers…");
+      try {
+        const data = await requestJSON(produrl + "getdealers/" + encodeURIComponent(product));
+        if (request !== dealerRequest) return;
+        if (!Array.isArray(data.dealers) || !data.dealers.length) throw new Error("No dealers");
+        data.dealers.forEach(dealer => dealerSelect.add(new Option(dealer, dealer)));
+        dealerSelect.add(new Option("All Dealers", "All Dealers"));
+        dealerSelect.disabled = false;
+        showStatus("Select a dealer to see its price.");
+      } catch (error) {
+        if (request !== dealerRequest) return;
+        showStatus("Could not load dealers. Select the product again to retry.", true);
+      }
+    }
+    async function getDealerProductPrice() {
+      const product = productSelect.value;
+      const dealer = dealerSelect.value;
+      const request = ++priceRequest;
+      pricing.replaceChildren();
+      if (!product || !dealer) { showStatus("Select a dealer to see its price."); return; }
+      showStatus("Loading prices…");
+      const allDealers = dealer === "All Dealers";
+      const route = allDealers ? "allprice/" + encodeURIComponent(product)
+        : "price/" + encodeURIComponent(dealer) + "/" + encodeURIComponent(product);
+      try {
+        const data = await requestJSON(dealerurl + route);
+        if (request !== priceRequest) return;
+        if (allDealers) {
+          if (!Array.isArray(data.prices) || !data.prices.length) throw new Error("No prices");
+          const table = document.createElement("table");
+          const caption = table.createCaption();
+          caption.textContent = product + " prices from all dealers";
+          const head = table.createTHead().insertRow();
+          ["Dealer", "Price"].forEach(label => {
+            const cell = document.createElement("th");
+            cell.scope = "col";
+            cell.textContent = label;
+            head.appendChild(cell);
+          });
+          const body = table.createTBody();
+          data.prices.forEach(price => {
+            const row = body.insertRow();
+            row.insertCell().textContent = price.key;
+            row.insertCell().textContent = price.value;
+          });
+          pricing.appendChild(table);
+        } else {
+          if (typeof data.message !== "string") throw new Error("Invalid price response");
+          pricing.textContent = data.message;
+        }
+        showStatus("");
+      } catch (error) {
+        if (request !== priceRequest) return;
+        showStatus("Could not load this price. Select the dealer again to retry.", true);
+      }
+    }
+    productSelect.addEventListener("change", getDealers);
+    dealerSelect.addEventListener("change", getDealerProductPrice);
+    retry.addEventListener("click", loadProducts);
+    loadProducts();
+  </script>
+</body>
+</html>
